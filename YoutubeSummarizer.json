@@ -1,0 +1,189 @@
+{
+  "name": "YoutubeSummariser",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "summarize-youtube",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "1591cb00-86ce-4407-a22c-6461f9483097",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -40,
+        -20
+      ],
+      "webhookId": "210e63b2-021e-419c-b6a6-64775862abef"
+    },
+    {
+      "parameters": {
+        "language": "JavaScript",
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor (const item of $input.all()) {\n  item.json.myNewField = 1;\n}\n\nreturn $input.all();"
+      },
+      "id": "5037d88a-7c2b-40f4-868e-6d59aa7a12ae",
+      "name": "Extract Video ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        160,
+        -20
+      ]
+    },
+    {
+      "parameters": {
+        "command": "/tmp/venv/bin/python /data/scripts/YoutubeSummariser/get_transcript.py {{$json.video_id}}\n"
+      },
+      "id": "0b6da368-c19e-4c33-96cf-e5ab2d6f82f1",
+      "name": "Get Transcript (Python)",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        360,
+        -20
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-3.5-turbo",
+          "mode": "list",
+          "cachedResultName": "GPT-3.5-TURBO"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "You are an assistant that summarizes YouTube transcripts into 5 concise bullet points.",
+              "role": "system"
+            },
+            {
+              "content": "Summarize the following transcript:\n\n{{$json[\"stdout\"]}}"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "id": "57e4a388-dc09-4146-bf91-3173487f0f8c",
+      "name": "OpenAI Summary",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        600,
+        -20
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "HGM9IskBMLYQxaGq",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "summary",
+              "value": "{{$json[\"choices\"][0][\"message\"][\"content\"]}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "608634d1-e78b-47c3-8582-d360856a786a",
+      "name": "Prepare Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        980,
+        -20
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "464bf963-d093-48ff-9292-9ef9aa32c2ee",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1180,
+        -20
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract Video ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Video ID": {
+      "main": [
+        [
+          {
+            "node": "Get Transcript (Python)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Transcript (Python)": {
+      "main": [
+        [
+          {
+            "node": "OpenAI Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Summary": {
+      "main": [
+        [
+          {
+            "node": "Prepare Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "3873af3f-b107-4c0d-bf37-881b9975181e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "95eece811b5a17bf1f0093f597dbc0f1e079fe1a7ec0ec2ec3cb17263acdea81"
+  },
+  "id": "cmb861SY675wad2Y",
+  "tags": []
+}

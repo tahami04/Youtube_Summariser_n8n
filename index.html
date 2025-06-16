@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>YouTube Video Summarizer</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 1rem;
+    }
+    input[type="text"], button {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      font-size: 16px;
+    }
+    #output {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f2f2f2;
+      border-radius: 8px;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>YouTube Video Summarizer</h1>
+
+  <input type="text" id="videoUrl" placeholder="Enter YouTube video URL..." />
+  <button onclick="summarizeVideo()">Summarize</button>
+
+  <div id="output"></div>
+
+<script>
+  async function summarizeVideo() {
+    const videoUrl = document.getElementById('videoUrl').value;
+    const output = document.getElementById('output');
+    output.innerText = '⏳ Summarizing...';
+
+    try {
+      const response = await fetch('http://127.0.0.1:5678/webhook-test/summarize-youtube', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ video_url: videoUrl })
+      });
+
+      const data = await response.json();
+      console.log('✅ Raw Response:', data);
+
+      // Extract fields safely
+      const summaryField = data?.message?.content?.summary;
+      const keyPoints = data?.message?.content?.key_points;
+
+      let summary = '';
+      if (typeof summaryField === 'string') {
+        summary = summaryField;
+      } else if (typeof summaryField === 'object') {
+        summary = JSON.stringify(summaryField, null, 2);
+      }
+
+      let html = '';
+      if (summary) {
+        html += `<p><strong>Summary:</strong> ${summary}</p>`;
+      }
+
+      if (Array.isArray(keyPoints)) {
+        html += `<strong>Key Points:</strong><ul>${keyPoints.map(point => `<li>${point}</li>`).join('')}</ul>`;
+      }
+
+      output.innerHTML = html || '⚠️ No summary found.';
+
+    } catch (error) {
+      output.innerText = `❌ Error: ${error.message}`;
+    }
+  }
+</script>
+
+</body>
+</html>
